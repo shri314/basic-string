@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <limits>
+#include <algorithm>
 #include <cassert>
 
 template<class T>
@@ -26,8 +27,9 @@ public:
     BasicString() = default;
 
     BasicString(const CharT* buf, size_t sz)
-        : BasicString(reserve_t{sz}, buf, sz)
+        : BasicString()
     {
+        append(buf, sz);
     }
 
     template<size_t N>
@@ -47,11 +49,10 @@ public:
     }
 
     BasicString(BasicString&& rhs) noexcept
-        : BasicString()
+        : m_data(std::exchange(rhs.m_data, nullptr))
+        , m_size(std::exchange(rhs.m_size, 0u))
+        , m_capacity(std::exchange(rhs.m_capacity, 0u))
     {
-        using std::swap;
-
-        swap(*this, rhs);
     }
 
     friend void swap(BasicString& lhs, BasicString& rhs) noexcept
@@ -63,20 +64,56 @@ public:
         swap(lhs.m_data, rhs.m_data);
     }
 
-    BasicString& operator=(const BasicString& rhs)
+    BasicString& assign(BasicString&& rhs)
     {
-        BasicString tmp = rhs;
+        using std::swap;
 
+        BasicString tmp = std::move(rhs);
         swap(*this, tmp);
         return *this;
     }
 
+    void clear()
+    {
+        m_size = 0; // std::destroy....
+    }
+
+    BasicString& assign(const CharT* buf, size_t sz)
+    {
+        if(sz > capacity() || !std::is_nothrow_constructible_v<CharT>)
+        {
+            using std::swap;
+
+            BasicString tmp{buf, sz};
+            swap(*this, tmp);
+        }
+        else
+        {
+            clear();
+            append(buf, sz);
+        }
+
+        return *this;
+    }
+
+    BasicString& assign(const CharT* buf)
+    {
+        return assign(buf, strlen_(buf));
+    }
+
+    BasicString& assign(const BasicString& rhs)
+    {
+        return assign(rhs.data(), rhs.size());
+    }
+
+    BasicString& operator=(const BasicString& rhs)
+    {
+        return assign(rhs.data(), rhs.size());
+    }
+
     BasicString& operator=(BasicString&& rhs)
     {
-        BasicString tmp = std::move(rhs);
-
-        swap(*this, tmp);
-        return *this;
+        return assign(std::move(rhs));
     }
 
     ~BasicString()
@@ -90,9 +127,15 @@ public:
     {
         if(new_cap > capacity())
         {
-            BasicString tmp{reserve_t{new_cap}, *this};
+            set_capacity_(new_cap);
+        }
+    }
 
-            swap(tmp, *this);
+    void shrink_to_fit()
+    {
+        if(size() < capacity())
+        {
+            set_capacity_(size());
         }
     }
 
@@ -105,13 +148,10 @@ public:
                                     add_sat_(size(), sz)      // linear progression
                                 );
 
-            if(new_cap > max_size())
-                throw std::length_error("size too big");
-
-            reserve( new_cap );
+            set_capacity_(new_cap);
         }
 
-        *std::copy(buf, buf + sz, data() + size()) = *ptr_to_null();
+        *std::copy(buf, buf + sz, data() + size()) = *ptr_to_null(); // std::uninitialized_copy
         m_size += sz;
 
         return *this;
@@ -125,6 +165,11 @@ public:
     BasicString& append(CharT ch)
     {
         return append(std::addressof(ch), 1u);
+    }
+
+    BasicString& push_back(CharT ch)
+    {
+        return append(ch);
     }
 
     //////////////////////////
@@ -219,32 +264,35 @@ public:
     //////////////////////////
 
 private:
-    struct reserve_t{ size_t sz; };
-
-    explicit
-    BasicString(reserve_t rz)
+    struct reserve_t
     {
-        m_data = new CharT[rz.sz + 1]; // TODO: use allocator
-        m_capacity = rz.sz;
-    }
+        explicit reserve_t(size_t value)
+            : value(value)
+        {
+        }
 
-    explicit
-    BasicString(reserve_t rz, const CharT* buf, size_t sz)
-        : BasicString(rz)
-    {
-        append(buf, sz);
-    }
+        size_t value;
+    };
 
-    explicit
-    BasicString(reserve_t rz, const BasicString& rhs)
-        : BasicString(rz)
+    explicit BasicString(reserve_t rz)
     {
-        append(rhs);
+        m_data = new CharT[rz.value + 1]; // TODO: use allocator
+        m_capacity = rz.value;
     }
 
     size_t spare_capacity_() const
     {
         return capacity() - size();
+    }
+
+    void set_capacity_(size_t new_cap)
+    {
+        if(new_cap > max_size())
+            throw std::length_error("size too big");
+
+        BasicString tmp{reserve_t{new_cap}};
+        tmp.append(*this);
+        swap(tmp, *this);
     }
 
     static CharT* ptr_to_null()
