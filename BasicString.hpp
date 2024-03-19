@@ -146,7 +146,7 @@ public:
     {
         if(new_cap > capacity())
         {
-            set_capacity_(new_cap);
+            set_capacity_exsafe_(new_cap);
         }
     }
 
@@ -154,7 +154,7 @@ public:
     {
         if(size() < capacity())
         {
-            set_capacity_(size());
+            set_capacity_exsafe_(size());
         }
     }
 
@@ -169,7 +169,7 @@ public:
                                     add_sat_(size(), sz)      // linear progression
                                 );
 
-            set_capacity_(new_cap);
+            set_capacity_exsafe_(new_cap);
         }
 
         *std::copy(buf, buf + sz, data() + size()) = *ptr_to_null(); // std::uninitialized_copy
@@ -461,7 +461,7 @@ private:
         return capacity() - size();
     }
 
-    void set_capacity_(size_t new_cap)
+    void set_capacity_exsafe_(size_t new_cap)
     {
         if(new_cap > max_size())
             throw std::length_error("size too big");
