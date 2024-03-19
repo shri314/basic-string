@@ -166,7 +166,7 @@ public:
         {
             size_t new_cap = std::max(
                                     add_sat_(size(), size()), // geometric progression
-                                    add_sat_(size(), sz)      // linear progression
+                                    add_sat_(size(), sz)      // arithmetic progression
                                 );
 
             set_capacity_exsafe_(new_cap);
@@ -505,3 +505,6 @@ std::ostream& operator<<(std::ostream& os, const BasicString<CharT>& rhs)
 
     return os;
 }
+
+using String = BasicString<char>;
+using wString = BasicString<wchar_t>;

@@ -563,4 +563,6 @@ int main()
             assert( r == 0u );
         }
     }
+
+    std::cout << "PASSED" << std::endl;
 }

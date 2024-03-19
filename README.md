@@ -15,6 +15,5 @@ make -C build_dir
 
 ### running the tests
 ```
-./build_dir/test; if [ $? == 0 ]; then echo PASSED; else echo FAILED; fi
+./build_dir/test || echo FAILED
 ```
-(the binary produces no output if it passes - else aborts)
