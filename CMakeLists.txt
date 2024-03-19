@@ -9,7 +9,12 @@ project(BasicString)
 
 add_executable(
     test
-    test.cpp
+    test/test.cpp
+)
+
+target_include_directories(
+    test
+    PUBLIC "include"
 )
 
 add_compile_options(
