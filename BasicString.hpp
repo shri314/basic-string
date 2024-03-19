@@ -439,6 +439,8 @@ public:
 
     //////////////////////////
 
+    // TODO: iterators, const_iterators
+
 private:
     struct reserve_t
     {
@@ -505,6 +507,8 @@ std::ostream& operator<<(std::ostream& os, const BasicString<CharT>& rhs)
 
     return os;
 }
+
+// TODO: operator+
 
 using String = BasicString<char>;
 using wString = BasicString<wchar_t>;
